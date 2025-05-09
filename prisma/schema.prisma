@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//// auth 
+model User {
+  id           Int            @id @default(autoincrement())
+  googleId     String         @unique
+  email        String         @unique
+  name         String
+  picture      String
+  role         String?
+  createdAt    DateTime       @default(now())
+  session      Session[]
+  GoogleTokens GoogleTokens[]
+
+  @@index([googleId], name: "google_id_index")
+}
+
+model Session {
+  id        String   @id
+  userId    Int
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model GoogleTokens {
+  id                          Int      @id @default(autoincrement())
+  userId                      Int      @unique
+  accessToken                 String
+  accessTokenExpiresAt        DateTime
+  accessTokenExpiresInSeconds Int
+  idToken                     String
+  refreshToken                String?
+  scopes                      String
+  tokenType                   String
+  data                        Json?
+  hasRefreshToken             Boolean  @default(false)
+  hasScopes                   Boolean  @default(false)
+  user                        User     @relation(fields: [userId], references: [id])
+
+  @@map("google_tokens")
+}
+
+////  ferma
+model Senzor {
+  id             Int         @id @default(autoincrement())
+  sensorName     String
+  familyId       Int
+  productId      Int
+  photograph     String?
+  payloadDecoder String?
+  decoder        Json?
+  zpl            String?
+  description    String?
+  stocks         Stock[]
+  sales          Sale[]
+  orders         Order[]
+  components     Component[]
+}
+
+model Component {
+  id               Int              @id @default(autoincrement())
+  sensorId         Int
+  componentName    String
+  requiredQuantity Int
+  sensor           Senzor           @relation(fields: [sensorId], references: [id])
+  componentStocks  ComponentStock[]
+}
+
+model ComponentStock {
+  componentId Int
+  stockId     Int
+  component   Component @relation(fields: [componentId], references: [id])
+  stock       Stock     @relation(fields: [stockId], references: [id])
+
+  @@id([componentId, stockId])
+}
+
+model Stock {
+  id              Int              @id @default(autoincrement())
+  sensorId        Int?
+  componentName   String
+  quantityInStock Int
+  type            StockType        @default(KOMPONENTA)
+  sensor          Senzor?          @relation(fields: [sensorId], references: [id])
+  componentStocks ComponentStock[]
+}
+
+enum StockType {
+  KOMPONENTA
+  CELOTENSENZOR
+}
+
+model Sale {
+  id           Int      @id @default(autoincrement())
+  sensorId     Int
+  quantity     Int
+  saleDate     DateTime
+  price        Float
+  customerName String
+  sensor       Senzor   @relation(fields: [sensorId], references: [id])
+}
+
+model Order {
+  id              Int      @id @default(autoincrement())
+  customerName    String
+  assemblerName   String
+  sensorId        Int
+  quantity        Int
+  frequency       String
+  orderDate       DateTime
+  otherParameters String?
+  sensor          Senzor   @relation(fields: [sensorId], references: [id])
+}
+
+model ProductionList {
+  id               Int    @id @default(autoincrement())
+  DeviceType       String
+  dev_eui          String
+  join_eui         String
+  app_key          String
+  lora_freq_reg    String
+  SubBands         String
+  device_hw_ver    String
+  device_fw_ver    String
+  CustomFWVersion  String
+  lora_send_period String
+  lora_ack         String
+  device_mov_thr   String
+  orderNumber      Int
+}
