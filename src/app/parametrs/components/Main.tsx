@@ -22,7 +22,7 @@ import {
   ParsedSensorValue,
   SensorParserCombinator,
 } from "~/app/dev/components/Reader/ParseSensorData";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { GetSensors } from "./db";
 import { DynamicFormComponent } from "~/app/dev/components/SensorCheckForm";
 
@@ -32,6 +32,7 @@ type DeviceType = {
   familyId: number;
   decoder: SensorParserCombinator;
 };
+
 
 export default function Parameters() {
   const [order_number, set_order_number] = useState<string>("");
@@ -51,6 +52,47 @@ export default function Parameters() {
     queryFn: async () => await GetSensors(),
   });
 
+  const startScanMutation = async ({
+    family_id,
+    company_name,
+    order_number,
+    formValues,
+  }: {
+    family_id: number;
+    company_name: string;
+    order_number: string;
+    formValues: ParsedSensorData;
+  }) => {
+    if (company_name.trim() === "") {
+      throw new Error("Company name must not be empty.");
+    }
+
+    const formData = {
+      family_id,
+      company_name,
+      order_number,
+      ...formValues
+    };
+
+    set_target_sensor_data(formData);
+    console.log("Data stored:", formData);
+
+    const result = await createFolderAndSpreadsheet(company_name, order_number);
+    set_credentials(result);
+
+    return result;
+  };
+
+
+  const mutation = useMutation({
+    mutationFn: startScanMutation,
+    onSuccess: () => {
+
+    },
+    onError: (error) => {
+      alert(error.message);
+    }
+  });
   const devices: DeviceType[] | undefined = useMemo(() => {
     return sensors?.map((device) => ({
       name: device.sensorName,
@@ -160,31 +202,18 @@ export default function Parameters() {
           <Button
             variant="contained"
             color="primary"
-            onClick={async () => {
-              if (company_name.trim() === "") {
-                alert("Company name must not be empty.");
-                return;
-              }
-              const formData = {
+            onClick={() => {
+              mutation.mutate({
                 family_id,
                 company_name,
                 order_number,
-                ...formValues
-              };
-
-              set_target_sensor_data(formData);
-              console.log("Data stored:", formData);
-
-              const result = await createFolderAndSpreadsheet(
-                company_name,
-                order_number
-              );
-
-              set_credentials(result);
+                formValues
+              });
               router.push("/dev");
             }}
+            disabled={mutation.isPending}
           >
-            Start Scan
+            {mutation.isPending ? 'Processing...' : 'Start Scan'}
           </Button>
         </Box>
       </Box>

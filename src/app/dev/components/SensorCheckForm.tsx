@@ -33,9 +33,9 @@ import {
   Typography,
   TextField,
   Checkbox,
-  Select,
   MenuItem,
   Paper,
+  Select,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
@@ -263,24 +263,11 @@ export function SensorCheckForm() {
     }
     dataHandler(current_sensor.data as ParsedSensorData)
       .then(async () => {
-        console.log("onSubmit before", {
-          all_sensors,
-          current_sensor_index,
-          current_sensor,
-        });
-
-        set_sensor_status(current_sensor_index, true);
 
         set_sensor_data(
           current_sensor_index,
           current_sensor.data as ParsedSensorData
         );
-
-        console.log("onSubmit after", {
-          all_sensors,
-          current_sensor_index,
-          current_sensor,
-        });
 
         const uint_array = await GetDataFromSensor();
         if (!uint_array || !sensors) return;
@@ -370,13 +357,22 @@ export function SensorCheckForm() {
             }}
           >
             <Button
-              onClick={GetDataFromSensor}
-              style={{
+              onClick={async () => {
+                const uint_array = await GetDataFromSensor();
+                if (!uint_array || !sensors) return;
+                const decoder = RightDecoder(uint_array, sensors);
+                if (!decoder) return;
+                add_new_sensor(decoder, uint_array);
+              }}
+              sx={{
                 backgroundColor: "#4CAF50",
                 color: "white",
                 padding: "10px 20px",
                 border: "none",
                 cursor: "pointer",
+                "&:hover": {
+                  backgroundColor: "#388e3c",
+                },
               }}
             >
               Open Serial Port
@@ -699,11 +695,37 @@ export function DynamicFormComponent({
           sx={{ backgroundColor: getStatusColor2(my_key, value) }}
         />
       ) : my_type === "enum" && enum_values ? (
-        (console.log(my_key, value),
-          (
-            <FormControl fullWidth sx={{ backgroundColor: getStatusColor2(my_key, value) }} >
+        (() => {
+          let primerjator = 0;
+          switch (value) {
+            case "EU868":
+              primerjator = 5;
+              break;
+            case "US915":
+              primerjator = 8;
+              break;
+            case "AS923":
+              primerjator = 3;
+              break;
+            default:
+              break;
+          }
+
+          return (
+            <FormControl fullWidth sx={{ backgroundColor: getStatusColor2(my_key, primerjator) }}>
               <InputLabel>{my_key}</InputLabel>
-              <Select label={my_key} value={value} onChange={handleChange}>
+              <Select
+                label={my_key}
+                value={
+                  typeof value === "number"
+                    ? value
+                    : enum_values.find((item) =>
+                      (typeof value === "string" && item.mapped === value) ||
+                      (typeof value === "number" && item.value === value)
+                    )?.value ?? ""
+                }
+                onChange={handleChange}
+              >
                 {enum_values.map((item) => (
                   <MenuItem key={item.value} value={item.value}>
                     {item.mapped}
@@ -711,7 +733,8 @@ export function DynamicFormComponent({
                 ))}
               </Select>
             </FormControl>
-          ))
+          );
+        })()
       ) : (
         <Typography color="error">Invalid type: {my_type}</Typography>
       )}
@@ -739,6 +762,7 @@ function getStatusColor2(
       return "white";
     }
   }
+  console.log("Name", name, "Vrednost", vrednost, "Target", target);
 
   return "red";
 }

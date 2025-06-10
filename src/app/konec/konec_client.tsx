@@ -292,6 +292,15 @@ export function Konec() {
           variant="outlined"
           color="secondary"
           onClick={() => {
+            if (!dataAdded) {
+              if (
+                !window.confirm(
+                  "Niste dodali podatkov v Drive. Ste prepričani, da želite resetirati podatke in se vrniti nazaj? Ta akcija bo izbrisala trenutne podatke."
+                )
+              ) {
+                return;
+              }
+            }
             resetStore();
             router.push("/parametrs");
           }}
