@@ -211,9 +211,9 @@ export default function Parameters() {
               });
               router.push("/dev");
             }}
-            disabled={mutation.isPending}
+
           >
-            {mutation.isPending ? 'Processing...' : 'Start Scan'}
+            Start Scan
           </Button>
         </Box>
       </Box>
